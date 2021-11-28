@@ -1,19 +1,8 @@
 <?php   
-    /*
-    CR    
-    */
-    /* For sample use only */
-    $databaseConnection = @mysqli_connect('localhost', 'root', '', 'test');
     
     function closeConnection(object $databaseConnection) : bool {
         return mysqli_close($databaseConnection);
     }
-
-    /**
-     * Execute queries created
-     * @param object $databaseConnection put your database connection here
-     * @param string $query write your SQL statement or query here 
-     */
 
     function executeQuery(object $databaseConnection, string $query) : bool {
         return mysqli_query($databaseConnection, $query);
@@ -24,14 +13,14 @@
     }
 
     function sanitize(object $databaseConnection, string $data) : string {
-        return @mysqli_real_escape_string($databaseConnection, htmlentities($data, ENT_COMPAT, 'UTF-8'));
+        return @mysqli_real_escape_string($databaseConnection, htmlentities(preg_replace('/<[^>]*>/', '*', $data), ENT_COMPAT, 'UTF-8'));
     }
 
     function sanitizeArray(object $databaseConnection, array $arrayOfData = []) : array {
 
         foreach ($arrayOfData as $columnKey => $columnValue) {
-            $columnKey   = @mysqli_real_escape_string($databaseConnection, htmlentities($columnKey, ENT_COMPAT, 'UTF-8'));
-            $columnValue = @mysqli_real_escape_string($databaseConnection, htmlentities($columnValue, ENT_COMPAT, 'UTF-8'));
+            $columnKey   = sanitize($databaseConnection, $columnKey);
+            $columnValue = sanitize($databaseConnection, $columnValue);
             $arrayOfData[$columnKey] = $columnValue;
         }
 
@@ -139,38 +128,34 @@
         $setData = implode(', ', $newSet);
         $tableColumn = key($where);
 
-        return "UPDATE $tableName SET $setData WHERE $tableColumn = $where[$tableColumn]";
+        return "UPDATE $tableName SET $setData WHERE $tableColumn = '$where[$tableColumn]'";
     }
 
-    $tableName = 'account';
-
-    
-    $userEmail = 'justin.developer@gmail.com';
-    $getEmailQuery = createReadQuery('account', 'email', ['email' => $userEmail]);
-    $getEmail = readData($databaseConnection, $getEmailQuery);
-    $isAlreadyRegistered = ($userEmail == $getEmail);
-    
-    if(!$isAlreadyRegistered) {
-       $insertStatement = createInsertStatement($databaseConnection, $tableName,
-        [
-            'name' => 'Justin Pascual',
-            'email' => $userEmail,
-            'password' => password_hash("hey123", PASSWORD_DEFAULT)
-        ]);
-
-        $isExecuted = executeQuery($databaseConnection, $insertStatement);
-
-        if(!$isExecuted) {
-            echo "not executed";
+    function createDeleteStatement(string $tableName, array $where = []) : string {
+        $whereArrayCount = count($where);
+        
+        if($whereArrayCount == 0) {
+            die("Error: WHERE cannot be empty");
+            return "";
         }
 
-        echo "data inserted";
-    } else {
-        echo 'already registered';
+        if($whereArrayCount != 1) {
+            die("Error: Please use only one key and one value");
+            return "";
+        }
+
+        $tableColumn = key($where);
+        
+        return "DELETE FROM $tableName WHERE $tableColumn = '$where[$tableColumn]'";
     }
 
-    
-
-
-    closeConnection($databaseConnection);
+    function isFieldsEmpty(array  $arrayOfData) : bool {
+        foreach ($arrayOfData as $key => $value) {
+            if(empty($value)) {
+                return true;
+                break;
+            }
+        }
+        return false;
+    }
 ?>
