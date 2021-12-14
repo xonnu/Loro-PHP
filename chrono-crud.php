@@ -1,65 +1,115 @@
 <?php   
+    function closeConnection(object $connection) : bool {
+        return mysqli_close($connection);
+    }
+
+    function execQuery(object $connection, string $query) : bool {
+        return mysqli_query($connection, $query);
+    }
     
-    function closeConnection(object $databaseConnection) : bool {
-        return mysqli_close($databaseConnection);
+    function rowCount(object $connection, string $table_name) : int {
+        return mysqli_num_rows(mysqli_query($connection, "SELECT * FROM $table_name"));
     }
 
-    function executeQuery(object $databaseConnection, string $query) : bool {
-        return mysqli_query($databaseConnection, $query);
-    }
-    
-    function rowCount(object $databaseConnection, string $tableName) : int {
-        return mysqli_num_rows(mysqli_query($databaseConnection, "SELECT * FROM $tableName"));
+    function sanitize(object $connection, string $data) : string {
+        return @mysqli_real_escape_string($connection, htmlentities(preg_replace('/<[^>]*>/', '*', $data), ENT_COMPAT, 'UTF-8'));
     }
 
-    function sanitize(object $databaseConnection, string $data) : string {
-        return @mysqli_real_escape_string($databaseConnection, htmlentities(preg_replace('/<[^>]*>/', '*', $data), ENT_COMPAT, 'UTF-8'));
-    }
+    function sanitizeArray(object $connection, array $array_of_data = []) : array {
 
-    function sanitizeArray(object $databaseConnection, array $arrayOfData = []) : array {
-
-        foreach ($arrayOfData as $columnKey => $columnValue) {
-            $columnKey   = sanitize($databaseConnection, $columnKey);
-            $columnValue = sanitize($databaseConnection, $columnValue);
-            $arrayOfData[$columnKey] = $columnValue;
+        foreach ($array_of_data as $column_key => $column_value) {
+            $column_key   = sanitize($connection, $column_key);
+            $column_value = sanitize($connection, $column_value);
+            $array_of_data[$column_key] = $column_value;
         }
 
-        return $arrayOfData;
+        return $array_of_data;
     }
 
-    function createInsertStatement(object $databaseConnection, string $tableName, array $arrayOfData) : string {
-        $cleanArrayOfData = sanitizeArray($databaseConnection, $arrayOfData);
-        $columnNames = implode(', ', array_keys($cleanArrayOfData));
-        $columnValues = implode("', '", array_values($cleanArrayOfData));
-        return "INSERT INTO $tableName($columnNames) VALUES('$columnValues')";
+    function createQuery(object $connection, string $table_name, array $array_of_data) : string {
+        $clean_array_of_data = sanitizeArray($connection, $array_of_data);
+        $column_names = implode(', ', array_keys($clean_array_of_data));
+        $column_values = implode("', '", array_values($clean_array_of_data));
+        return "INSERT INTO $table_name($column_names) VALUES('$column_values')";
     }
 
-    // Read Query Function
-    function createReadAllQuery(string $tableName, $selectColumn = '*', array $where = [], array $rowOption = [0, 0]) : string {
-        if($selectColumn == '*') {
-            $selectColumn = '*';
-        } else if(is_array($selectColumn)) {
-            $selectColumn = implode(', ', array_values($selectColumn));
-        }
+    function isColumnExists(object $connection, string $table_name, $select_column) {
+        if(is_array($select_column)) {
+            for ($i=0; $i < count($select_column); $i++) { 
+                $query = "SHOW COLUMNS FROM $table_name LIKE '{$select_column[$i]}'";
+                $result = mysqli_query($connection, $query);
+                $isExists = (mysqli_num_rows($result) == 0) ? true : false;
 
-        $isRowOptionChanged = $rowOption[0] != 0 && $rowOption[1] != 0; 
-        if($isRowOptionChanged) {
-            return "SELECT $selectColumn FROM $tableName LIMIT {$rowOption[0]}, {$rowOption[1]}";
-        }
+                if($isExists) {
+                    return die("Error: \"{$select_column[$i]}\" column name doesn't exist in the table.");
+                }
+            }
 
-        if(count($where) != 0 && count($where) == 1) {
-            $tableColumn = key($where);
-            return "SELECT $selectColumn FROM $tableName WHERE $tableColumn= $where[$tableColumn]";
-        } else {
-            return "Error: Please use only one key and one value";
+            return false;
         }
+        
+        $query = "SHOW COLUMNS FROM $table_name LIKE '$select_column'";
+        $result = mysqli_query($connection, $query);;
 
-        return "SELECT $selectColumn FROM $tableName";
+        return (mysqli_num_rows($result) == 0) ? die("Error: \"$select_column\" column name doesn't exist in the table.") : false;
     }
 
-    // Does not use @executeQuery Function
-    function readAllData(object $databaseConnection, string $query, string $returnType = 'ARRAY') {
-        $result = mysqli_query($databaseConnection, $query);
+    function readAllQuery(object $connection, string $table_name, $select_column = '', array $where = [], array $row_option = []) : string {
+        $query = "";
+   
+        if(!is_array($select_column)) {
+            if(isEmpty($select_column) || $select_column == '*') {
+                $query = "SELECT * FROM $table_name";
+            }
+        }   
+
+        if(is_array($select_column)) {
+
+            if(isEmpty($select_column) && $select_column != []) {
+                die("Error: This array has an empty value.");
+                return false;
+            }
+            
+            if($select_column == []) {
+                $query = "SELECT * FROM $table_name"; 
+            }
+
+            isColumnExists($connection, $table_name, $select_column);
+            
+            $select_column = implode(', ', array_values($select_column));
+            
+            if(strlen($select_column) <= 0) {
+                $select_column = '*';
+            }
+            
+            $query = "SELECT $select_column FROM $table_name";
+        }
+
+        if($where != null) {
+            if(count($where) != 0 && count($where) == 1) {
+                isColumnExists($connection, $table_name, array_keys($where)[0]); 
+                
+                $table_column = key($where);
+                $query .= " WHERE $table_column = '$where[$table_column]'";
+            } else {
+                return die("Error: Please use only one key and one value");
+            }
+        }
+
+        if($row_option != null) {
+            if(count($row_option) != 2) {
+                return die("Error: This array parameter has two (2) value. [OFFSET, LIMIT]");
+            }
+            
+            list($offset, $limit) = $row_option;
+            $query .= " LIMIT $offset, $limit";
+        }
+
+        return $query;
+    }
+
+    function execReadAll(object $connection, string $query, string $return_type = 'ARRAY') {
+        $result = mysqli_query($connection, $query);
 
         if(mysqli_num_rows($result) <= 0) {
             return [];
@@ -74,9 +124,9 @@
             $tableValues[] = $fetchData[$i];
         }
 
-        switch ($returnType) {
+        switch ($return_type) {
             case 'JSON':
-                return json_encode($tableValues);
+                return json_encode($tableValues, JSON_PRETTY_PRINT);
                 break;
             case 'ARRAY':
                 return $tableValues;
@@ -87,35 +137,39 @@
         }
     }
 
-    function createReadQuery(string $tableName, string $columnName, array $where = []) : string {
-        $whereArrayCount = count($where);
-        if($whereArrayCount == 0) {
-            return "SELECT $columnName FROM $tableName";
+    function readQuery(string $table_name, string $column_name, array $where = []) : string {
+        $where_array_count = count($where);
+        if($where_array_count == 0) {
+            return die("Error: Where paramter cannot be empty.");
         }
 
-        if($whereArrayCount != 1) {
-            return "Error: Please use only one key and one value";
+        if($where_array_count != 1) {
+            return die("Error: Where parameter has one key and one value. ['column_name' => 'column_value]");
         }
 
-        $tableColumn = key($where);
-        $columnValue = $where[$tableColumn];
+        if(strlen($column_name) <= 0) {
+            return die("Error: Column name parameter cannot be empty.");
+        }
+
+        $table_column = key($where);
+        $column_value = $where[$table_column];
         
-        return "SELECT $columnName FROM $tableName WHERE $tableColumn = '$columnValue'";
+        return "SELECT $column_name FROM $table_name WHERE $table_column = '$column_value'";
     }
 
-    function readData(object $databaseConnection, string $query) {
-        return @mysqli_fetch_row(mysqli_query($databaseConnection, $query))[0];
+    function execRead(object $connection, string $query) {
+        return @mysqli_fetch_row(mysqli_query($connection, $query))[0];
     }
 
-    function createUpdateStatement(string $tableName, $set, array $where = []) : string {
-        $whereArrayCount = count($where);
+    function updateQuery(string $table_name, $set, array $where = []) : string {
+        $where_array_count = count($where);
         
-        if($whereArrayCount == 0) {
+        if($where_array_count == 0) {
             die("Error: WHERE cannot be empty");
             return "";
         }
 
-        if($whereArrayCount != 1) {
+        if($where_array_count != 1) {
             die("Error: Please use only one key and one value");
             return "";
         }
@@ -126,36 +180,55 @@
         }
 
         $setData = implode(', ', $newSet);
-        $tableColumn = key($where);
+        $table_column = key($where);
 
-        return "UPDATE $tableName SET $setData WHERE $tableColumn = '$where[$tableColumn]'";
+        return "UPDATE $table_name SET $setData WHERE $table_column = '$where[$table_column]'";
     }
 
-    function createDeleteStatement(string $tableName, array $where = []) : string {
-        $whereArrayCount = count($where);
+    function deleteQuery(string $table_name, array $where = []) : string {
+        $where_array_count = count($where);
         
-        if($whereArrayCount == 0) {
-            die("Error: WHERE cannot be empty");
-            return "";
+        if($where_array_count == 0) {
+            return die("Error: WHERE cannot be empty");
         }
 
-        if($whereArrayCount != 1) {
-            die("Error: Please use only one key and one value");
-            return "";
+        if($where_array_count != 1) {
+            return die("Error: Please use only one key and one value");
         }
 
-        $tableColumn = key($where);
+        $table_column = key($where);
         
-        return "DELETE FROM $tableName WHERE $tableColumn = '$where[$tableColumn]'";
+        return "DELETE FROM $table_name WHERE $table_column = '$where[$table_column]'";
     }
 
-    function isFieldsEmpty(array  $arrayOfData) : bool {
-        foreach ($arrayOfData as $key => $value) {
-            if(empty($value)) {
+    function isEmpty($array_of_data) : bool {
+        if(is_array($array_of_data)) {
+            if(count($array_of_data) <= 0){
                 return true;
-                break;
             }
+
+            foreach ($array_of_data as $key => $value) {
+                if(empty($value)) {
+                    return true;
+                    break;
+                }
+            }
+            return false;
         }
-        return false;
+
+        return (empty($array_of_data) || strlen($array_of_data) <= 0) ? true : false;
+    }
+
+    function isExists(object $connection, string $table_name, string $table_column, string $data) : bool {
+        $clean_data = sanitize($connection, $data);
+        $check_data_query = readQuery($table_name, $table_column, [$table_column => $clean_data]);
+        $check_data = execRead($connection, $check_data_query);
+
+        return ($check_data == $clean_data && strlen($check_data) == strlen($clean_data)) ? true : false;
+    }
+
+    function validateEmail(object $connection, string $email) {
+        $clean_email = sanitize($connection, $email);
+        return (filter_var($clean_email, FILTER_VALIDATE_EMAIL) && checkdnsrr(explode('@', $clean_email)[1], 'MX')) ? filter_var($clean_email, FILTER_VALIDATE_EMAIL) : false;
     }
 ?>
