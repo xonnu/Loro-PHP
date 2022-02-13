@@ -12,7 +12,7 @@
     }
 
     function sanitize(object $connection, string $data) : string {
-        return @mysqli_real_escape_string($connection, htmlentities(preg_replace('/<[^>]*>/', '*', $data), ENT_COMPAT, 'UTF-8'));
+        return @mysqli_real_escape_string($connection, htmlentities(preg_replace('/<[^>]*>/', '*', @$data), ENT_COMPAT, 'UTF-8'));
     }
 
     function sanitizeArray(object $connection, array $array_of_data = []) : array {
@@ -227,8 +227,31 @@
         return ($check_data == $clean_data && strlen($check_data) == strlen($clean_data)) ? true : false;
     }
 
+    function registerAccount(object $connection, string $table_name, array $user_login_info = [], array $other_data = []) {
+        if(count($user_login_info) != 2) {
+            die('This parameter array must have two value (e.g. username/email, and password)');
+            return false;
+        }
+
+        if(count($other_data) != 0) {
+            // some logic here
+            return false;
+        }
+
+        array_push($user_login_info, uniqid());
+        $statement = createQuery($connection, $table_name, $user_login_info);
+        $isExecuted = execQuery($connection, $statement);
+        
+        if($isExecuted) {
+            echo "Successfully inserted to database.";
+        } else {
+            echo "Operation failed.";
+        }
+    }
+
     function validateEmail(object $connection, string $email) {
         $clean_email = sanitize($connection, $email);
         return (filter_var($clean_email, FILTER_VALIDATE_EMAIL) && checkdnsrr(explode('@', $clean_email)[1], 'MX')) ? filter_var($clean_email, FILTER_VALIDATE_EMAIL) : false;
     }
+
 ?>
