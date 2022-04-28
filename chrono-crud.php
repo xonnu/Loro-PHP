@@ -232,4 +232,33 @@
         return (filter_var($clean_email, FILTER_VALIDATE_EMAIL) && checkdnsrr(explode('@', $clean_email)[1], 'MX')) ? filter_var($clean_email, FILTER_VALIDATE_EMAIL) : false;
     }
 
+    function redirect(string $page) {
+        $page = (strpos($page, '.') !== false) ? $page : "$page.php";
+
+        header("location: {$page}", true, 302);
+        exit();
+    }
+
+    function session(string $session_name) {
+        return $_SESSION[$session_name];
+    }
+
+    function stopSession() {
+        session_destroy();
+    }
+
+    function createSession(string $session_name) {
+        $_SESSION[$session_name] = password_hash($session_name, PASSWORD_DEFAULT);
+    }
+
+    function checkSession(string $session_name, string $page) {
+        if(isset($_SESSION[$session_name])) {
+            if(!password_verify($session_name, $_SESSION[$session_name])) {
+                session_destroy();
+                die();
+            }
+        } else {
+            redirect($page);
+        }
+    }
 ?>

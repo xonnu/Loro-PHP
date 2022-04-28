@@ -3,8 +3,8 @@
   include_once 'database.php';
   
   $response = null;
-
   $table_name = 'account';
+  // Getting user data
   $user_data = [
     'user_id' => uniqid(),
     'username' => 'heychrono',
