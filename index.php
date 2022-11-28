@@ -15,9 +15,24 @@ class Loro
 
     }
 
-    public function tableName($table_name = '')
+    /**
+     * Set database table name;
+     * @param string $table_name
+     * @return string
+     */
+    public function tableName(string $table_name = ''): string
     {
         return $this->table_name = $table_name;
+    }
+
+    /**
+     * Execute your query statement
+     * @param string $query_statement
+     * @return bool
+     */
+    public function execute(string $query_statement = ''): bool
+    {
+        return $this->database_connection->query($query_statement);
     }
 
     /**
@@ -60,6 +75,7 @@ class Loro
         return $this->database_connection->real_escape_string($filtered_data);
     }
 
+
     /**
      * Checks if you are connected to the database.
      * Remove or comment this method after using.
@@ -97,12 +113,18 @@ $loro = new Loro($database_connection);
 //$loro->is_connected();
 $loro->tableName('account');
 $insert_query = $loro->insertQuery([
-    "user_id" => 1,
+    "user_id" => uniqid("LORO_"),
     "username" => 'Kurono',
     "email" => 'kurono@gmail.com',
     "password" => password_hash('password', PASSWORD_DEFAULT)
 ]);
 
-echo $insert_query;
+$is_executed = $loro->execute($insert_query);
+
+if ($is_executed) {
+    echo "Data inserted!";
+} else {
+    echo "Data insertion failed!";
+}
 
 
