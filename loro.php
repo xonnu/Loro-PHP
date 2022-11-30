@@ -1,9 +1,18 @@
 <?php
+/**
+ *  2022 - DEV
+ *  Developer: Justin Pascual
+ *  GitHub: https://github.com/devkurono
+ *  License: MIT
+ */
+
+declare(strict_types=1);
 
 use JetBrains\PhpStorm\NoReturn;
 
 class Loro
 {
+    public string $sql_statement = '';
     protected string $table_name;
 
     /**
@@ -26,26 +35,17 @@ class Loro
     }
 
     /**
-     * Execute your query statement
-     * @param string $query_statement
-     * @return bool
-     */
-    public function execute(string $query_statement = ''): bool
-    {
-        return $this->database_connection->query($query_statement);
-    }
-
-    /**
      * Create `INSERT` query statement
      * @param array $array_data
-     * @return string
+     * @return Loro
      */
-    public function insertQuery(array $array_data = []): string
+    public function insertQuery(array $array_data = []): Loro
     {
         $clean_array_data = $this->sanitizeArray($array_data);
         $column_names = implode(', ', array_keys($clean_array_data));
         $column_values = implode("', '", array_values($clean_array_data));
-        return "INSERT INTO $this->table_name($column_names) VALUES('$column_values')";
+        $this->sql_statement = "INSERT INTO $this->table_name($column_names) VALUES('$column_values')";
+        return $this;
     }
 
     /**
@@ -75,6 +75,79 @@ class Loro
         return $this->database_connection->real_escape_string($filtered_data);
     }
 
+    /**
+     * Generate UPDATE SQL statement
+     * @param $update_data_array
+     * @param array $where
+     * @return $this
+     */
+    public function updateQuery($update_data_array, array $where = []): Loro
+    {
+        $where_array_length = count($where);
+
+        if ($where_array_length === 0) {
+            die("Loro error: Second parameter 'where' cannot be empty");
+        }
+
+        if ($where_array_length !== 1) {
+            die("Loro error: Please use only one key and one value");
+        }
+
+        $update_data_statement = [];
+
+        foreach ($update_data_array as $array_key => $array_value) {
+            $array_key_clean = $this->sanitize($array_key);
+            $array_value_clean = $this->sanitize($array_value);
+            $update_data_statement[] = "$array_key_clean = '$array_value_clean'";
+        }
+
+
+        $update_data = implode(', ', $update_data_statement);
+        $table_column = key($where);
+        $table_column_value = $where[$table_column];
+
+        $this->sql_statement = "UPDATE $this->table_name SET $update_data WHERE $table_column = '$table_column_value'";
+        return $this;
+    }
+
+    /**
+     * Count row of specific table
+     * @param string $table_name
+     * @return int
+     */
+    public function rowCount(string $table_name = ''): int
+    {
+        if ($table_name !== '') {
+            $this->table_name = $table_name;
+        }
+
+        $result = $this->execute("SELECT * FROM $this->table_name");
+
+        return $result->num_rows;
+    }
+
+    /**
+     * Execute your query statement
+     * @param string $query_statement
+     * @return bool|object
+     */
+    public function execute(string $query_statement = ''): bool|object
+    {
+        if ($query_statement === '') {
+            $query_statement = $this->sql_statement;
+        }
+
+        return $this->database_connection->query($query_statement);
+    }
+
+    /**
+     * Generate user ID
+     * @return string
+     */
+    public function uid(): string
+    {
+        return uniqid('LORO_' . rand(1, 999));
+    }
 
     /**
      * Checks if you are connected to the database.
@@ -105,26 +178,5 @@ class Loro
     {
         $this->database_connection->close();
     }
+
 }
-
-$database_connection = new mysqli('localhost', 'root', '', 'chrono-crud-example');
-
-$loro = new Loro($database_connection);
-//$loro->is_connected();
-$loro->tableName('account');
-$insert_query = $loro->insertQuery([
-    "user_id" => uniqid("LORO_"),
-    "username" => 'Kurono',
-    "email" => 'kurono@gmail.com',
-    "password" => password_hash('password', PASSWORD_DEFAULT)
-]);
-
-$is_executed = $loro->execute($insert_query);
-
-if ($is_executed) {
-    echo "Data inserted!";
-} else {
-    echo "Data insertion failed!";
-}
-
-
