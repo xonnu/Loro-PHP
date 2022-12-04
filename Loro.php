@@ -15,13 +15,19 @@ class Loro
     public string $sql_statement = '';
     protected string $table_name;
 
+
     /**
      * Initialize your database connection
-     * @param object $database_connection
+     * @param object $db_connect
+     * @param string $table_name
      */
-    public function __construct(protected object $database_connection)
+    public function __construct(protected object $db_connect, string $table_name = '')
     {
+        $is_table_name_empty = $table_name === '';
 
+        if (!$is_table_name_empty) {
+            $this->table_name = $table_name;
+        }
     }
 
     /**
@@ -72,7 +78,7 @@ class Loro
     public function sanitize(string $data = ''): string
     {
         $filtered_data = htmlentities(preg_replace('/<[^>]*>/', '*', $data));
-        return $this->database_connection->real_escape_string($filtered_data);
+        return $this->db_connect->real_escape_string($filtered_data);
     }
 
     /**
@@ -85,11 +91,13 @@ class Loro
     {
         $where_array_length = count($where);
 
-        if ($where_array_length === 0) {
+        $is_where_array_empty = $where_array_length === 0;
+        if ($is_where_array_empty) {
             die("Loro error: Second parameter 'where' cannot be empty");
         }
 
-        if ($where_array_length !== 1) {
+        $is_where_array_not_one = $where_array_length !== 1;
+        if ($is_where_array_not_one) {
             die("Loro error: Please use only one key and one value");
         }
 
@@ -100,7 +108,6 @@ class Loro
             $array_value_clean = $this->sanitize($array_value);
             $update_data_statement[] = "$array_key_clean = '$array_value_clean'";
         }
-
 
         $update_data = implode(', ', $update_data_statement);
         $table_column = key($where);
@@ -117,7 +124,9 @@ class Loro
      */
     public function rowCount(string $table_name = ''): int
     {
-        if ($table_name !== '') {
+        $is_table_name_empty = $table_name === '';
+
+        if (!$is_table_name_empty) {
             $this->table_name = $table_name;
         }
 
@@ -133,11 +142,13 @@ class Loro
      */
     public function execute(string $query_statement = ''): bool|object
     {
-        if ($query_statement === '') {
+        $is_query_statement_empty = $query_statement === '';
+
+        if ($is_query_statement_empty) {
             $query_statement = $this->sql_statement;
         }
 
-        return $this->database_connection->query($query_statement);
+        return $this->db_connect->query($query_statement);
     }
 
     /**
@@ -156,8 +167,10 @@ class Loro
      */
     #[NoReturn] public function is_connected(): void
     {
-        if ($this->database_connection->connect_error) {
-            printf($this->errorMessage(), $this->database_connection->connect_error);
+        $is_db_not_connected = $this->db_connect->connect_error;
+
+        if ($is_db_not_connected) {
+            printf($this->errorMessage(), $this->db_connect->connect_error);
             die();
         }
 
@@ -176,7 +189,7 @@ class Loro
 
     public function __destruct()
     {
-        $this->database_connection->close();
+        $this->db_connect->close();
     }
 
 }
