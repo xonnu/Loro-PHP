@@ -1,5 +1,5 @@
 <?php
-require_once 'loro.php';
+require_once 'Loro.php';
 
 // Database Configuration
 $database_connection = new mysqli('localhost', 'root', '', 'chrono-crud-example');
