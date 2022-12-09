@@ -116,7 +116,7 @@ class Loro
     }
 
     /**
-     * Generate UPDATE SQL statement
+     * Create `UPDATE` query statement.
      * @param $update_data_array
      * @param array $where
      * @return $this
@@ -151,6 +151,11 @@ class Loro
         return $this;
     }
 
+    /**
+     * Create `DELETE` query statement.
+     * @param array $where
+     * @return $this
+     */
     public function deleteQuery(array $where = []): Loro
     {
         $where_array_length = count($where);
