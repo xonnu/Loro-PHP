@@ -151,6 +151,28 @@ class Loro
         return $this;
     }
 
+    public function deleteQuery(array $where = []): Loro
+    {
+        $where_array_length = count($where);
+
+        $is_where_array_empty = $where_array_length === 0;
+        if ($is_where_array_empty) {
+            die("Loro error: Second parameter 'where' cannot be empty");
+        }
+
+        $is_where_array_not_one = $where_array_length !== 1;
+        if ($is_where_array_not_one) {
+            die("Loro error: Please use only one key and one value");
+        }
+
+        $table_column = key($where);
+        $table_column_value = $where[$table_column];
+
+        $this->sql_statement = "DELETE FROM $this->table_name WHERE $table_column = '$table_column_value'";
+
+        return $this;
+    }
+
     /**
      * Count row of specific table
      * @param string $table_name
