@@ -11,8 +11,8 @@ $loro->tableName('account');
 // Creating Insert Query
 $insert_statement = $loro->insertQuery([
     "user_id" => $loro->uid(),
-    "username" => 'user-' . rand(1, 9999),
-    "email" => 'user' . rand(1, 9999) . '@gmail.com',
+    "username" => 'kurono',
+    "email" => 'kurono' . rand(1, 9999) . '@gmail.com',
     "password" => password_hash('password' . rand(1, 9999), PASSWORD_DEFAULT)
 ]);
 
