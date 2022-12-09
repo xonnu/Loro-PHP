@@ -19,7 +19,7 @@ class Loro
 
 
     /**
-     * Initialize your database connection
+     * Initialize your database connection.
      * @param object $db_connect
      * @param string $table_name
      */
@@ -42,7 +42,7 @@ class Loro
     }
 
     /**
-     * Create `INSERT` query statement
+     * Create `INSERT` query statement.
      * @param array $array_data
      * @return Loro
      */
@@ -82,6 +82,12 @@ class Loro
         return $this->db_connect->real_escape_string($filtered_data);
     }
 
+    /**
+     * Create `SELECT` query statement.
+     * @param string $column_name
+     * @param array $where
+     * @return $this
+     */
     public function readQuery(string $column_name, array $where = []): Loro
     {
         $where_array_length = count($where);
@@ -177,6 +183,15 @@ class Loro
         }
 
         return $this->db_connect->query($query_statement);
+    }
+
+    /**
+     * Read/print single data from database
+     * @return string
+     */
+    public function read(): string
+    {
+        return $this->db_connect->query($this->sql_statement)->fetch_row()[0];
     }
 
     /**
