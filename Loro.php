@@ -6,7 +6,9 @@
  *  License: MIT
  */
 
+
 declare(strict_types=1);
+error_reporting(E_STRICT);
 
 use JetBrains\PhpStorm\NoReturn;
 
@@ -24,7 +26,6 @@ class Loro
     public function __construct(protected object $db_connect, string $table_name = '')
     {
         $is_table_name_empty = $table_name === '';
-
         if (!$is_table_name_empty) {
             $this->table_name = $table_name;
         }
@@ -79,6 +80,33 @@ class Loro
     {
         $filtered_data = htmlentities(preg_replace('/<[^>]*>/', '*', $data));
         return $this->db_connect->real_escape_string($filtered_data);
+    }
+
+    public function readQuery(string $column_name, array $where = []): Loro
+    {
+        $where_array_length = count($where);
+
+        $is_where_array_empty = $where_array_length === 0;
+        if ($is_where_array_empty) {
+            die("Loro error: Second parameter 'where' cannot be empty");
+        }
+
+        $is_where_array_not_one = $where_array_length !== 1;
+        if ($is_where_array_not_one) {
+            die("Loro error: Where parameter has one key and one value. ['column_name' => 'column_value']");
+        }
+
+        $is_column_name_empty = strlen($column_name) <= 0;
+        if ($is_column_name_empty) {
+            die("Loro error: Column name parameter cannot be empty.");
+        }
+
+        $table_column = key($where);
+        $table_column_value = $where[$table_column];
+
+        $this->sql_statement = "SELECT $column_name FROM $this->table_name WHERE $table_column = '$table_column_value'";
+
+        return $this;
     }
 
     /**
