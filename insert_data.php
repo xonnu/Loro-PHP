@@ -11,8 +11,8 @@ $loro->tableName('fruits');
 // Creating Insert Query
 $insert_statement = $loro->insertQuery([
     "fruit_id" => $loro->uid(),
-    "fruit" => '🥕',
-    "fruit_rate" => "Bad",
+    "fruit" => '🥭',
+    "fruit_rate" => "Very good!",
 ]);
 
 // Checking if data insert success
