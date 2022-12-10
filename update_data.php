@@ -1,24 +1,25 @@
 <?php
+
 require_once 'Loro.php';
 
 // Database Configuration
-$database_connection = new mysqli('localhost', 'root', '', 'chrono-crud-example');
+$database_connection = new mysqli('localhost', 'root', '', 'loro-database-example');
 
 // Loro Initialization
 $loro = new Loro($database_connection);
-$loro->tableName('account');
+$loro->tableName('fruits');
 
 // Creating Update Query
 $update_statement = $loro->updateQuery([
-    "username" => 'loro-update'
-], ['user_id' => 'LORO_109638']);
+    "fruit" => '🍊'
+], ['fruit_id' => 2]);
 
 // Checking if data update success
 $is_update_success = $update_statement->execute();
 
 if ($is_update_success) {
-    print "Data updated!";
+    print "Fruit updated!";
 } else {
-    print "Data update failed!";
+    print "Fruit update failed!";
 }
 

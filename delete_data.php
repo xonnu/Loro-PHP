@@ -2,18 +2,18 @@
 require_once 'Loro.php';
 
 // Database Configuration
-$database_connection = new mysqli('localhost', 'root', '', 'chrono-crud-example');
+$database_connection = new mysqli('localhost', 'root', '', 'loro-database-example');
 
 // Loro Initialization
 $loro = new Loro($database_connection);
-$loro->tableName('account');
+$loro->tableName('fruits');
 
 // Delete data from database using id.
-$delete_statement = $loro->deleteQuery(['user_id' => 'LORO_700639']);
+$delete_statement = $loro->deleteQuery(['fruit_id' => '3']);
 $is_executed = $delete_statement->execute();
 
 if ($is_executed) {
-    print "Deleted";
+    print "Fruit Deleted";
 } else {
-    print "Deletion failed";
+    print "Fruit Deletion failed";
 }
